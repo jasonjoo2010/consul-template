@@ -300,8 +300,12 @@ func (v *View) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 		v.receivedData = true
 		v.dataLock.Unlock()
 
-		close(doneCh)
-		return
+		select {
+		case doneCh <- struct{}{}:
+		case <-v.stopCh:
+			close(doneCh)
+			return
+		}
 	}
 }
 

@@ -174,3 +174,22 @@ func (d *TestDepBlock) Fetch(clients *dep.ClientSet, opts *dep.QueryOptions) (in
 func (d *TestDepBlock) String() string {
 	return "test_dep_block"
 }
+
+// TestDepDataChange is a dependency that the data and index keep changing each time fetching.
+type TestDepDataChange struct {
+	TestDep
+	name  string
+	index uint64
+}
+
+func (d *TestDepDataChange) Fetch(clients *dep.ClientSet, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
+	time.Sleep(time.Millisecond)
+	data := fmt.Sprintf("this is some data, index=%d", d.index)
+	rm := &dep.ResponseMetadata{LastIndex: d.index}
+	d.index++
+	return data, rm, nil
+}
+
+func (d *TestDepDataChange) String() string {
+	return fmt.Sprintf("test_dep_data_change(%s)", d.name)
+}

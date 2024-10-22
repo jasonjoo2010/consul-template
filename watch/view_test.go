@@ -197,6 +197,50 @@ func TestFetch_resetRetries(t *testing.T) {
 	}
 }
 
+// TestFetch_multipleUpdates tests the case of receiving updates when disable Once
+func TestFetch_multipleUpdates(t *testing.T) {
+	view, err := NewView(&NewViewInput{
+		Dependency: &TestDepDataChange{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doneCh := make(chan struct{})
+	successCh := make(chan struct{})
+	errCh := make(chan error)
+
+	go view.fetch(doneCh, successCh, errCh)
+
+	var last string
+	for i := 0; i < 10; i++ {
+		select {
+		case <-successCh:
+		case _, ok := <-doneCh:
+			if !ok {
+				t.Error("the doneCh should not be closed during running")
+			}
+			if view.data.(string) == last {
+				t.Error("the data should change")
+			}
+			last = view.data.(string)
+		case err := <-errCh:
+			t.Errorf("error while fetching: %s", err)
+		}
+	}
+	close(view.stopCh)
+	time.Sleep(time.Millisecond)
+	select {
+	case _, ok := <-doneCh:
+		if ok {
+			t.Errorf("the doneCh should be closed")
+		}
+	case <-successCh:
+	case err := <-errCh:
+		t.Errorf("error while fetching: %s", err)
+	}
+}
+
 func TestFetch_failedLookupError(t *testing.T) {
 	view, err := NewView(&NewViewInput{
 		Dependency:       &TestDepBlock{},
